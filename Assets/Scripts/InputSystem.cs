@@ -25,14 +25,14 @@ public class InputSystem : MonoBehaviour
             moveHorz = getHorz;
             moveVert = getVert;
             button1 = getButton;
-            mainActor.GetInput(moveHorz,moveVert,button1);
+            ///mainActor.GetInput(moveHorz,moveVert,button1);
             break;
 
             case false:
             moveHorz = Input.GetAxis("Horizontal");
             moveVert = Input.GetAxis("Vertical");
             button1 = Input.GetButtonDown("Jump");
-            mainActor.GetInput(moveHorz,moveVert,button1);
+            //mainActor.GetInput(moveHorz,moveVert,button1);
             break;
         }
     }

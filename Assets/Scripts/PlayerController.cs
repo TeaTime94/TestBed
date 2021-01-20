@@ -22,9 +22,8 @@ public class PlayerController : MonoBehaviour
     public bool gotten; //Did we just eat shit and get hit by a monster?
     private Vector2 leftStick;  //Left stick/D-Pad on the controller
     public Vector2 dumStick;    //Dummy stick that other things control
-    private bool button1;   //The jump button
     public bool shifting;   //Are we switching between rooms?
-    private bool jumping;   //Did the jump button just get pressed?
+    public bool jumping;   //Did the jump button just get pressed?
     
     void Start()
     {
@@ -35,47 +34,24 @@ public class PlayerController : MonoBehaviour
     
     void Update()
     {
-        switch (shifting)
-        {   
-            case false: //The stick should be read if we aren't shifting
-            leftStick = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
-            button1 = Input.GetButtonDown("Jump");
-            jumping = button1;  //This line feels somewhat redundant but I guess it is kind of important, considering other things change it.
-            break;
-            case true:  //Otherwise read the dummy stick and cancel out the button.
+        if (shifting)
+        {  
             leftStick = dumStick;
-            button1 = false;
-            break;
         }
-    }
-    
-    
-    void FixedUpdate()
-    {
-        GetInput(leftStick.x,leftStick.y,button1);  //Do the movement code
-        grounded = GroundCast();
-        if (gotten)     //If we've been hit we need to send the player hurtling back to the last spawn location
+        else
         {
-            
-            transform.position = Vector3.SmoothDamp(transform.position, SpawnManager.spawnPosition, ref respawnVel, respawnSpeed);
-        
-            if (Vector3.Distance(transform.position, SpawnManager.spawnPosition) <= 1.0f) //If we're close enough, turn "respawn" mode shit off.
+            leftStick = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
+            //jumping = Input.GetButtonDown("Jump");
+            if (Input.GetButtonDown("Jump") && grounded)
             {
-                gotten = false;
-                cap.enabled = true;
-                actorBody.gravityScale = gScale;
+                jumping = true;
+                Debug.Log("I pressed the jump button.");
             }
+            //jumping = button1;  //This line feels somewhat redundant but I guess it is kind of important, considering other things change it.
         }
-        
-    }
-    public void GetInput(float x_vec,float y_vec,bool hop)
-    {
-        if (!gotten)    //This code should ONLY run if we're "alive"
-        {
-            switch (touchClimbable)
+        if (touchClimbable)
             {
-                case true:
-                if (y_vec > 0.5f)   //If we're touching a ladder and press up, we wanna stick to the ladder. 
+                if (leftStick.y > 0.5f)   //If we're touching a ladder and press up, we wanna stick to the ladder. 
                 {
                     onClimb = true;
                     actorBody.gravityScale = 0.0f;
@@ -86,39 +62,62 @@ public class PlayerController : MonoBehaviour
                         transform.position = tempTransform; //Snap the player to the ladder's X position.
                     }
                 }
-                break;
             }
-            
-            //Set up movement vectors depending on if we're on a ladder or not.
-            switch (onClimb)    
-            {
-                case true:
-                Vector2 ladVector = new Vector2(actorBody.velocity.x, (y_vec*runSpeed));    //Ladder mode only cares about vertical movement
-                actorBody.velocity = ladVector;
-                if (Mathf.Abs(x_vec) > 0.5f)        //Any movement on the horizontal axis will end Ladder mode
+        if (onClimb)
+        {
+            if ((Mathf.Abs(leftStick.x) > 0.5f)||(leftStick.y < -0.5f && grounded))        //Any movement on the horizontal axis will end Ladder mode
                 {
                     onClimb = false;
                     actorBody.gravityScale = gScale;
                 }
-                break;
-                case false:
+        }
+        if (gotten)
+        {
+            RespawnMove();
+        }
+    }
+    
+    
+    void FixedUpdate()
+    {
+        if (actorBody.velocity.y >= 0.0f)
+        {
+            grounded = GroundCast();
+        }
+        if (!gotten)     //If we've been hit we need to send the player hurtling back to the last spawn location
+        {
+            GetInput(leftStick.x,leftStick.y);  //Do the movement code
+        }
+        
+    }
+    public void GetInput(float x_vec,float y_vec)
+    {
+            
+            
+            //Set up movement vectors depending on if we're on a ladder or not.
+            if (onClimb)    
+            {
+                Vector2 ladVector = new Vector2(0.0f, (y_vec*(runSpeed/1.5f)));    //Ladder mode only cares about vertical movement
+                actorBody.velocity = ladVector;
+                
+            }
+            else
+            {
                 if (grounded && jumping)
                 {
-                    actorBody.velocity += ((jumpStrength) * Vector2.up);
-                    grounded = false;
-                    jumping = false;
+                    DoJump();
                 }
                 Vector2 movVector = new Vector2((x_vec*runSpeed), actorBody.velocity.y);   //Not-Ladder mode only cares about horizontal movement
                 actorBody.velocity = movVector;    //Apply the movement vector to the rigidbody, making it move along the X axis.
-                break;
             }
-        }
+        
     }
     
     public bool GroundCast()
     {
         groundLayer = 1 << groundID;
-        RaycastHit2D hit = Physics2D.Raycast(transform.position, Vector2.down, castDistance, groundLayer); //Raycast down from origin at a specific distance.
+        Vector2 tempPosition = new Vector2 (transform.position.x, transform.position.y-1.0f);
+        RaycastHit2D hit = Physics2D.Raycast(tempPosition, Vector2.down, castDistance, groundLayer); //Raycast down from origin at a specific distance.
         if (hit)
         {
             return true;
@@ -127,16 +126,26 @@ public class PlayerController : MonoBehaviour
     }
     
     //Commented this out to see if I putting the code directly there would work. It did not. Don't know what I'm gonna do with this now.
-    /*void TryJump()
+    void DoJump()
     {
-        if (grounded && jumping)
-        {
+        
+            Debug.Log("I actually jumped.");
             actorBody.velocity += ((jumpStrength) * Vector2.up);
             grounded = false;
             jumping = false;
-        }
-    }*/
-    
+        
+    }
+    void RespawnMove()
+    {
+        transform.position = Vector3.SmoothDamp(transform.position, SpawnManager.spawnPosition, ref respawnVel, respawnSpeed);
+        
+            if (Vector3.Distance(transform.position, SpawnManager.spawnPosition) <= 1.0f) //If we're close enough, turn "respawn" mode shit off.
+            {
+                gotten = false;
+                cap.enabled = true;
+                actorBody.gravityScale = gScale;
+            }
+    }
     void OnCollisionEnter2D(Collision2D other)
     {
         if (other.gameObject.CompareTag("Monster") && !gotten)
