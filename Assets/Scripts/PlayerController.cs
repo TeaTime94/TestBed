@@ -148,8 +148,10 @@ public class PlayerController : MonoBehaviour
     }
     void OnCollisionEnter2D(Collision2D other)
     {
-        if (other.gameObject.CompareTag("Monster") && !gotten)
+        if ((other.gameObject.CompareTag("Monster") || other.gameObject.CompareTag("Harmful") )&& !gotten)
         {
+            Vector3 newVel = new Vector3 (0.0f,0.0f,0.0f);
+            actorBody.velocity = newVel;
             cap.enabled = false;                //Gotta turn off the collider and gravity so that the player can FLY back to spawn.
             actorBody.gravityScale = 0;         
             gotten = true;                      

@@ -91,6 +91,8 @@ public class CameraHandler : MonoBehaviour
         if (tempPos == dampTarget.position)
         {
             transform.position = dampTarget.position;
+            right = false;
+            vert = false;
             actorCheck.shifting = false;
             shifting = false;
         }
