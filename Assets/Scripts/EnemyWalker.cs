@@ -11,10 +11,13 @@ public class EnemyWalker : MonoBehaviour
     private Vector2 mainSensor; //Main sensor
     public float moveSpeed = 2.0f;  //Movement speed
     public bool edgeDetect = true;  //Untick this to make the enemy walk off of ledges rather than turning around
+    public bool bounce = false;     //Tick this to make the enemy jump every time it hits the ground.
     public bool grounded = true;    //Are we on the ground?
     public bool direction = false; //true = right, false = left
+    public bool jumping = false;
     private Rigidbody2D badActor;   //Rigidbody for Physix
     public float castDistance = 0.5f;   //Distance from sensor's center.
+    public float jumpStrength = 0.0f;
     void Start()
     {
         badActor = GetComponent<Rigidbody2D>();
@@ -26,14 +29,24 @@ public class EnemyWalker : MonoBehaviour
         mainSensor = (Vector2)transform.position;
         rightSensor = new Vector2(transform.position.x+0.5f,transform.position.y);
         bool leftHit = GroundCast(leftSensor, castDistance+1.0f);   //Left and right casts always go down lower because we might be on a slope.
-        grounded = GroundCast(mainSensor, castDistance);
+        if (GroundCast(mainSensor, castDistance) && badActor.velocity.y <= 0)
+        {
+            grounded = true;
+            if (jumping)
+            {
+            jumping = false;
+            }
+        }
         bool rightHit = GroundCast(rightSensor, castDistance+1.0f);
+        if (bounce && grounded)
+        {
+            DoBounce();
+        }
         Vector2 moveVec = new Vector2(moveSpeed, badActor.velocity.y);  //Movement vector, we don't really jump so eh, just horizontal.
         badActor.velocity = moveVec;   
         //Do the edge detection code if that option's been flagged.
-        switch (edgeDetect)     
+        if (edgeDetect)
         {
-            case true:
             switch (direction)
             {
                 case false:
@@ -43,14 +56,19 @@ public class EnemyWalker : MonoBehaviour
                 EdgeCheck(rightHit);
                 break;
             }
-            
-            break;
-            case false:
-            break;
         }
+        
+        
         WallCheck();    //Do the wall code check regardless.
     }
+    public void DoBounce()
+    {
 
+            badActor.velocity += ((jumpStrength) * Vector2.up);
+            grounded = false;
+            jumping = true;
+        
+    }
     //Turn around if we're about to go off a cliff.
     public void EdgeCheck(bool hit)
     {
@@ -104,7 +122,7 @@ public class EnemyWalker : MonoBehaviour
     public bool WallCast(Vector2 sensor, float castLength)
     {
         groundLayer = 1 << groundID;
-        RaycastHit2D hit = Physics2D.Raycast(sensor, Vector2.left, castLength, groundLayer); //Raycast down from origin at a specific distance.
+        RaycastHit2D hit = Physics2D.Raycast(sensor, Vector2.right, castLength, groundLayer); //Raycast down from origin at a specific distance.
         if (hit)
         {
             return true;

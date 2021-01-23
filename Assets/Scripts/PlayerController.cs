@@ -45,7 +45,7 @@ public class PlayerController : MonoBehaviour
             if (Input.GetButtonDown("Jump") && grounded)
             {
                 jumping = true;
-                Debug.Log("I pressed the jump button.");
+                //Debug.Log("I pressed the jump button.");
             }
             //jumping = button1;  //This line feels somewhat redundant but I guess it is kind of important, considering other things change it.
         }
@@ -58,7 +58,7 @@ public class PlayerController : MonoBehaviour
                     grounded = false;
                     if (nearestClimb != null)   //Make sure that there hasn't been a mistake or anything
                     {
-                        Vector2 tempTransform = new Vector2(nearestClimb.position.x, transform.position.y);
+                        Vector3 tempTransform = new Vector3(nearestClimb.position.x, transform.position.y, transform.position.z);
                         transform.position = tempTransform; //Snap the player to the ladder's X position.
                     }
                 }
@@ -90,6 +90,10 @@ public class PlayerController : MonoBehaviour
         }
         
     }
+    void LateUpdate()
+    {
+        Debug.DrawRay(transform.position, Vector2.down*castDistance, Color.green);
+    }
     public void GetInput(float x_vec,float y_vec)
     {
             
@@ -116,7 +120,7 @@ public class PlayerController : MonoBehaviour
     public bool GroundCast()
     {
         groundLayer = 1 << groundID;
-        Vector2 tempPosition = new Vector2 (transform.position.x, transform.position.y-1.0f);
+        Vector2 tempPosition = new Vector2 (transform.position.x, transform.position.y);
         RaycastHit2D hit = Physics2D.Raycast(tempPosition, Vector2.down, castDistance, groundLayer); //Raycast down from origin at a specific distance.
         if (hit)
         {
@@ -129,7 +133,7 @@ public class PlayerController : MonoBehaviour
     void DoJump()
     {
         
-            Debug.Log("I actually jumped.");
+            //Debug.Log("I actually jumped.");
             actorBody.velocity += ((jumpStrength) * Vector2.up);
             grounded = false;
             jumping = false;
@@ -139,7 +143,7 @@ public class PlayerController : MonoBehaviour
     {
         transform.position = Vector3.SmoothDamp(transform.position, SpawnManager.spawnPosition, ref respawnVel, respawnSpeed);
         
-            if (Vector3.Distance(transform.position, SpawnManager.spawnPosition) <= 1.0f) //If we're close enough, turn "respawn" mode shit off.
+            if (Vector3.Distance(transform.position, SpawnManager.spawnPosition) <= 0.5f) //If we're close enough, turn "respawn" mode shit off.
             {
                 gotten = false;
                 cap.enabled = true;

@@ -10,8 +10,13 @@ public class CheckPoint : MonoBehaviour
     {
         if (other.gameObject.CompareTag("Player"))
         {
-            SpawnManager.spawnPosition = other.transform.position;
+           
+            if (other.GetComponent<PlayerController>().grounded)
+            {
+            Vector3 checkPosition = new Vector3(transform.position.x,other.transform.position.y, other.transform.position.z);
+            SpawnManager.spawnPosition = checkPosition;
             SpawnManager.spawnTarget = checkTrans;
+            }
         }
     }
 }
