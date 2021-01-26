@@ -6,34 +6,44 @@ public class PlayerController : MonoBehaviour
 {
     public LayerMask groundLayer;
     public int groundID = 8;
-    public float runSpeed = 4.0f;   //Running speed
-    public float jumpStrength = 2.0f;   //Jumping strength
-    private Rigidbody2D actorBody;  //Rigidbody for Physix
-    public bool grounded;   //Are we touching ground?
+    public float rotSpeed = 0.125f;       //Speed at which POKE's model will rotate.
     public float castDistance = 0.0f;   //Distance from center to ground
     public float gScale = 2.5f;     //Gravity scale, gets passed to rigidbody
+    public float runSpeed = 4.0f;   //Running speed
+    public float jumpStrength = 2.0f;   //Jumping strength
+    public float respawnSpeed = 0.5f;   //Dampening speed 
     public bool onClimb = false;    //Are we climbing?
     public bool touchClimbable = false; //Are we touching a ladder like a filthy degenerate?
+    public bool gotten; //Did we just eat shit and get hit by a monster?
+    public bool shifting;   //Are we switching between rooms?
+    public bool jumping;   //Did the jump button just get pressed?
+    public bool grounded;   //Are we touching ground?
+    public Vector2 dumStick;    //Dummy stick that other things control
     public Transform nearestClimb;  //Transform position for the nearest ladder we're touching.
+    public Transform myModel;
     //public Vector3 lastPoint; //No longer necessary, I keep it around because it has abandonment issues and might get lonely.
     private CapsuleCollider2D cap;  //Capsule collider, since we need to turn that shit on and off.
     private Vector3 respawnVel = Vector3.zero;  //Velocity initator for respawn code
-    public float respawnSpeed = 0.5f;   //Dampening speed
-    public bool gotten; //Did we just eat shit and get hit by a monster?
     private Vector2 leftStick;  //Left stick/D-Pad on the controller
-    public Vector2 dumStick;    //Dummy stick that other things control
-    public bool shifting;   //Are we switching between rooms?
-    public bool jumping;   //Did the jump button just get pressed?
-    
+    private Rigidbody2D actorBody;  //Rigidbody for Physix
+    public Transform rRot;
+    public Transform lRot;
+    private float timeCount = 0.0f;
+    public bool facing = true; //Flag this as true to face right.
+
     void Start()
     {
         actorBody = GetComponent<Rigidbody2D>(); //Need rigidbody for physix to work
         cap = GetComponent<CapsuleCollider2D>();    //get the collider so we can turn it on and off
         SpawnManager.spawnPosition = transform.position;    //Set the spawn point
+        myModel = myModel.GetComponent<Transform>();
+        rRot = rRot.GetComponent<Transform>();
+        lRot = lRot.GetComponent<Transform>();
     }
     
     void Update()
     {
+        
         if (shifting)
         {  
             leftStick = dumStick;
@@ -41,6 +51,7 @@ public class PlayerController : MonoBehaviour
         else
         {
             leftStick = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
+            
             //jumping = Input.GetButtonDown("Jump");
             if (Input.GetButtonDown("Jump") && grounded)
             {
@@ -49,6 +60,50 @@ public class PlayerController : MonoBehaviour
             }
             //jumping = button1;  //This line feels somewhat redundant but I guess it is kind of important, considering other things change it.
         }
+            if (leftStick.x > 0)
+            {
+                facing = true;
+            }
+            else if (leftStick.x < 0)
+            {
+                facing = false;
+            }
+            //Do the rotation here
+            if (onClimb)
+            {
+                Quaternion rotVec = Quaternion.Euler(0,0,0);
+                myModel.rotation = rotVec;
+            }
+            else
+            {
+                if (facing)
+                {
+                    if (myModel.rotation.y != rRot.rotation.y)
+                    {
+                        myModel.rotation = Quaternion.Slerp(myModel.rotation, rRot.rotation, timeCount);
+                        timeCount = (timeCount) + Time.deltaTime*rotSpeed;
+                    }
+                    else
+                    {
+                        myModel.rotation = rRot.rotation;
+                        timeCount = 0;
+                    }
+                }
+                else if (!facing)
+                {
+                    if (myModel.rotation.y != lRot.rotation.y)
+                    {
+                    myModel.rotation = Quaternion.Slerp(myModel.rotation, lRot.rotation, timeCount);
+                    timeCount = (timeCount) + Time.deltaTime*rotSpeed;
+                    }
+                    else
+                    {
+                        myModel.rotation = lRot.rotation;
+                        timeCount = 0;
+                    }
+                }
+            }
+
         if (touchClimbable)
             {
                 if (leftStick.y > 0.5f)   //If we're touching a ladder and press up, we wanna stick to the ladder. 
@@ -77,7 +132,8 @@ public class PlayerController : MonoBehaviour
         }
     }
     
-    
+
+
     void FixedUpdate()
     {
         if (actorBody.velocity.y >= 0.0f)
@@ -94,6 +150,8 @@ public class PlayerController : MonoBehaviour
     {
         Debug.DrawRay(transform.position, Vector2.down*castDistance, Color.green);
     }
+
+
     public void GetInput(float x_vec,float y_vec)
     {
             
@@ -145,10 +203,12 @@ public class PlayerController : MonoBehaviour
         
             if (Vector3.Distance(transform.position, SpawnManager.spawnPosition) <= 0.5f) //If we're close enough, turn "respawn" mode shit off.
             {
+                transform.position = SpawnManager.spawnPosition;
                 gotten = false;
                 cap.enabled = true;
                 actorBody.gravityScale = gScale;
             }
+
     }
     void OnCollisionEnter2D(Collision2D other)
     {
